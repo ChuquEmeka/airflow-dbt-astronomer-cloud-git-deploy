@@ -27,7 +27,7 @@ jobs:
 
       - name: Install Airflow and Dependencies
         run: |
-          pip install apache-airflow pytest astronomer-cosmos==1.8.2
+          pip install apache-airflow pytest astronomer-cosmos==1.8.2 pydantic
           airflow db init
           airflow db upgrade
 
