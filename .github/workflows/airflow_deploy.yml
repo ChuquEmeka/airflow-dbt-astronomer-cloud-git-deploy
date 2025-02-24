@@ -46,7 +46,7 @@ jobs:
           curl -sSL install.astronomer.io | sudo bash
 
       - name: Authenticate with Astronomer
-        run: astro login ${{ secrets.ASTRO_CLOUD_URL }} --token ${{ secrets.ASTRO_API_KEY }}
+        run: astro login ${{ secrets.ASTRO_CLOUD_URL }} --token-login ${{ secrets.ASTRO_API_KEY }}
 
       - name: Deploy to Astronomer
         run: |
