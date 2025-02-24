@@ -13,7 +13,12 @@ RUN python -m venv $VENV_PATH && \
 
 
 
+# Install dependencies from requirements.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
+# Install astronomer-cosmos explicitly
+RUN pip install --no-cache-dir astronomer-cosmos==1.8.2
 # Store environment activation script inside Airflow home
 RUN echo "source $VENV_PATH/bin/activate" > /usr/local/airflow/dbt_env.sh
 RUN chmod +x /usr/local/airflow/dbt_env.sh
