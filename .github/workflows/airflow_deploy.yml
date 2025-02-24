@@ -1,12 +1,12 @@
-name: Deploy Airflow DAGs to Astronomer
+name: Airflow CI/CD
 
 on:
   push:
     branches:
-      - main  # Runs on push to main branch
+      - main  # ✅ Trigger on push to main branch
   pull_request:
     branches:
-      - main  # Runs on PRs targeting main
+      - main  # ✅ Trigger on PRs to main branch
 
 jobs:
   lint-test:
@@ -22,30 +22,32 @@ jobs:
         with:
           python-version: "3.9"
 
-      - name: Install dependencies
-        run: pip install apache-airflow pytest
+      - name: Install Airflow and Dependencies
+        run: |
+          pip install apache-airflow pytest astronomer-cosmos==1.8.2
+          airflow db init  # ✅ Initializes Airflow metadata database
+          airflow db upgrade  # ✅ Ensures database tables exist
 
       - name: Test DAG integrity
         run: |
-          python -c "import airflow; from airflow.models import DagBag; d = DagBag(); assert not d.import_errors"
+          python -c "import airflow; from airflow.models import DagBag; d = DagBag(include_examples=False); assert not d.import_errors, d.import_errors"
 
   deploy:
-    name: Deploy to Astronomer
+    name: Deploy to Astronomer Cloud
     runs-on: ubuntu-latest
-    needs: lint-test
-    if: github.event_name == 'push'
+    needs: lint-test  # ✅ Only deploy if linting & tests pass
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install Astro CLI
+      - name: Set up Astro CLI
         run: |
-          curl -sSL https://install.astronomer.io | bash
-          echo "$HOME/.astro/bin" >> $GITHUB_PATH
+          curl -sSL install.astronomer.io | sudo bash
 
-      - name: Authenticate to Astronomer
-        run: astro auth login ${{ secrets.ASTRO_DEPLOYMENT_URL }} --token ${{ secrets.ASTRO_TOKEN }}
+      - name: Authenticate with Astronomer
+        run: astro login ${{ secrets.ASTRO_CLOUD_URL }} --token ${{ secrets.ASTRO_API_KEY }}
 
-      - name: Deploy to Astronomer Cloud
-        run: astro deploy
+      - name: Deploy to Astronomer
+        run: |
+          astro deploy ${{ secrets.ASTRO_DEPLOYMENT_ID }} --force
