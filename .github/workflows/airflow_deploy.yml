@@ -27,7 +27,8 @@ jobs:
 
       - name: Install Airflow and Dependencies
         run: |
-          pip install apache-airflow pytest astronomer-cosmos==1.8.2
+          pip install -r requirements.txt
+          pip install astronomer-cosmos==1.8.2 kubernetes
           airflow db init
           airflow db upgrade
 
@@ -43,9 +44,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Deploy to Astro (Infer Mode)
+      - name: Deploy to Astro (Force Full Image Build)
         uses: astronomer/deploy-action@v0.9.0
         with:
           deployment-id: ${{ secrets.ASTRO_DEPLOYMENT_ID }}
-          deploy-type: infer
+          deploy-type: image-and-dags  # Force full image build
           parse: true
