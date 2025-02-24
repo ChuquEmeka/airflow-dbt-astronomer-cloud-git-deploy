@@ -1,12 +1,15 @@
-name: Airflow CI/CD
+name: Astronomer CI/CD - Deploy Airflow & dbt
 
 on:
   push:
     branches:
-      - main  # ✅ Trigger on push to main branch
+      - main
   pull_request:
     branches:
-      - main  # ✅ Trigger on PRs to main branch
+      - main
+
+env:
+  ASTRO_API_TOKEN: ${{ secrets.ASTRO_API_TOKEN }}
 
 jobs:
   lint-test:
@@ -25,8 +28,8 @@ jobs:
       - name: Install Airflow and Dependencies
         run: |
           pip install apache-airflow pytest astronomer-cosmos==1.8.2
-          airflow db init  # ✅ Initializes Airflow metadata database
-          airflow db upgrade  # ✅ Ensures database tables exist
+          airflow db init
+          airflow db upgrade
 
       - name: Test DAG integrity
         run: |
@@ -35,19 +38,14 @@ jobs:
   deploy:
     name: Deploy to Astronomer Cloud
     runs-on: ubuntu-latest
-    needs: lint-test  # ✅ Only deploy if linting & tests pass
-
+    needs: lint-test
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Astro CLI
-        run: |
-          curl -sSL install.astronomer.io | sudo bash
-
-      - name: Authenticate with Astronomer
-        run: astro login ${{ secrets.ASTRO_CLOUD_URL }} --token-login ${{ secrets.ASTRO_API_KEY }}
-
-      - name: Deploy to Astronomer
-        run: |
-          astro deploy ${{ secrets.ASTRO_DEPLOYMENT_ID }} --force
+      - name: Deploy to Astro (Infer Mode)
+        uses: astronomer/deploy-action@v0.9.0
+        with:
+          deployment-id: ${{ secrets.ASTRO_DEPLOYMENT_ID }}
+          deploy-type: infer
+          parse: true
