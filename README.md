@@ -3,6 +3,10 @@
 This guide walks you through setting up a data pipeline using Apache Airflow, Google BigQuery, and dbt, automating healthcare data workflows with clear, actionable steps. This project is developed and explained by Emeka. The video demonstration can be found in this [Youtube link](https://youtu.be/a8wP37AX-d8)
 
 ---
+## Data Pipeline Overview
+- **Description**: This image illustrates the data pipeline orchestration using Apache Airflow, Google BigQuery, and dbt, showing the sequence of tasks: generating raw data with a Python script for Google Cloud Storage (GCS), creating BigQuery external tables, performing generic source data tests, and executing dbt transformations and model tests.
+- **Image**: [`Data Pipeline Orchestration Diagram`](./images/airflow_orchastration.png)
+---
 ## Table of Contents
 - [Prerequisites](#prerequisites)
 - [Step 1: Set Up Your Development Environment](#step-1-set-up-your-development-environment)
@@ -14,7 +18,8 @@ This guide walks you through setting up a data pipeline using Apache Airflow, Go
 - [Step 7: Set Up dbt and Run Tests](#step-7-set-up-dbt-and-run-tests)
 - [Step 8: Run dbt Transformations](#step-8-run-dbt-transformations)
 - [Step 9: Switch Between Dev and Prod Environments](#step-9-switch-between-dev-and-prod-environments)
-- [Step 10: Test and Deploy](#step-10-test-and-deploy)
+- [Step 10: Test and Deploy](#step-10-test-and-deploy) 
+- [Result](#result)
 - [Additional Tips](#additional-tips)
 - [Resources](#resources)
 
@@ -293,7 +298,15 @@ This guide walks you through setting up a data pipeline using Apache Airflow, Go
      - Update `cosmos_config.py` for prod, then run: `astro deploy`.
 
 ---
+## Result
+- **What It Achieves**: Highlights the successful implementation and output of the healthcare data pipeline.
+- **Summary**: The project successfully automates a healthcare data pipeline using Apache Airflow, generating raw data, creating external tables in Google BigQuery, and transforming data with dbt. The pipeline orchestrates tasks to produce cleaned, tested datasets (e.g., `health_anomalies`, `patient_demographics`) stored in BigQuery, with raw data managed in Google Cloud Storage buckets (`healthcare-data-bucket-emeka`).
+- **Visuals**:
+  - Airflow DAG: [`healthcare_pipeline` DAG visualization](./images/Airflow.png)
+  - BigQuery Table: [`health_anomalies` table in dev_healthcare_data](./images/BigQuery.png)
+  - Google Cloud Storage: [`healthcare-data-bucket-emeka` bucket](./images/GCS.png)
 
+---
 ## Additional Tips
 - **Error Handling**: Add `on_failure_callback` in the DAG for logging or alerts.
 - **Monitoring**: Use Airflow UI or integrate Slack notifications.
