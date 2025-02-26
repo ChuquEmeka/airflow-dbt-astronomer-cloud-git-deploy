@@ -5,7 +5,7 @@ This guide walks you through setting up a data pipeline using Apache Airflow, Go
 ---
 ## Data Pipeline Overview
 - **Description**: This image illustrates the data pipeline orchestration using Apache Airflow, Google BigQuery, and dbt, showing the sequence of tasks: generating raw data with a Python script for Google Cloud Storage (GCS), creating BigQuery external tables, performing generic source data tests, and executing dbt transformations and model tests.
-- **Image**: [`Data Pipeline Orchestration Diagram`](./images/airflow_orchastration.png)
+- **Image**: ![Data Pipeline Orchestration Diagram](./images/airflow_orchastration.png)
 ---
 ## Table of Contents
 - [Prerequisites](#prerequisites)
@@ -302,9 +302,9 @@ This guide walks you through setting up a data pipeline using Apache Airflow, Go
 - **What It Achieves**: Highlights the successful implementation and output of the healthcare data pipeline.
 - **Summary**: The project successfully automates a healthcare data pipeline using Apache Airflow, generating raw data, creating external tables in Google BigQuery, and transforming data with dbt. The pipeline orchestrates tasks to produce cleaned, tested datasets (e.g., `health_anomalies`, `patient_demographics`) stored in BigQuery, with raw data managed in Google Cloud Storage buckets (`healthcare-data-bucket-emeka`).
 - **Visuals**:
-  - Airflow DAG: [`healthcare_pipeline` DAG visualization](./images/Airflow.png)
-  - BigQuery Table: [`health_anomalies` table in dev_healthcare_data](./images/BigQuery.png)
-  - Google Cloud Storage: [`healthcare-data-bucket-emeka` bucket](./images/GCS.png)
+  - Airflow DAG: ![`healthcare_pipeline` DAG visualization](./images/Airflow.png)
+  - BigQuery Table: ![`health_anomalies` table in dev_healthcare_data](./images/BigQuery.png)
+  - Google Cloud Storage: ![`healthcare-data-bucket-emeka` bucket](./images/GCS.png)
 
 ---
 ## Additional Tips
