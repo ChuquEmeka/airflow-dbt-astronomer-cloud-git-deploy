@@ -15,7 +15,7 @@ PATH_TO_SQL_SCRIPT = "/usr/local/airflow/include/raw_data_generation/create_exte
 GCP_CONN_ID = Variable.get("GCP_CONN_ID", default_var="gcp")
 TARGET_ENV = DBT_CONFIG.target_name  # 'dev' or 'prod'
 
-# Read and modify the SQL file dynamically based on environment
+# Read and modify the SQL file dynamically based on env
 with open(PATH_TO_SQL_SCRIPT, "r") as f:
     CREATE_EXTERNAL_TABLES_SQL = f.read() \
         .replace("dev_healthcare_data", f"{TARGET_ENV}_healthcare_data") \
