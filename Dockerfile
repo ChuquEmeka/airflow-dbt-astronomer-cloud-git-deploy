@@ -12,13 +12,26 @@ RUN python -m venv $VENV_PATH && \
     deactivate
 
 
-
-# Install dependencies from requirements.txt
-# COPY requirements.txt .
-# RUN pip install --no-cache-dir -r requirements.txt
-
-# Install astronomer-cosmos explicitly
-# RUN pip install --no-cache-dir astronomer-cosmos==1.8.2 pydantic
 # Store environment activation script inside Airflow home
 RUN echo "source $VENV_PATH/bin/activate" > /usr/local/airflow/dbt_env.sh
 RUN chmod +x /usr/local/airflow/dbt_env.sh
+
+
+# FROM quay.io/astronomer/astro-runtime:12.7.1
+
+# # Set environment variables
+# ENV VENV_PATH="/usr/local/airflow/dbt_venv"
+# ENV PATH="$VENV_PATH/bin:$PATH"
+
+# # Copy requirements.txt into the image
+# COPY requirements.txt /usr/local/airflow/requirements.txt
+
+# # Create virtual environment and install dependencies
+# RUN python -m venv $VENV_PATH \
+#     && $VENV_PATH/bin/pip install --upgrade pip setuptools \
+#     && $VENV_PATH/bin/pip install --no-cache-dir dbt-bigquery==1.5.3 pandas Faker pyarrow numpy \
+#     && $VENV_PATH/bin/pip install --no-cache-dir -r /usr/local/airflow/requirements.txt
+
+# # Store environment activation script inside Airflow home
+# RUN echo "source $VENV_PATH/bin/activate" > /usr/local/airflow/dbt_env.sh \
+#     && chmod +x /usr/local/airflow/dbt_env.sh

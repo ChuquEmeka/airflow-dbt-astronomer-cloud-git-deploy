@@ -24,4 +24,4 @@ healthcare_dbt_bigquery_data_pipeline:  # Must match "profile" in dbt_project.ym
       threads: 4
       type: bigquery
 
-  target: dev
+  target: prod
