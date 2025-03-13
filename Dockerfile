@@ -8,7 +8,7 @@ ENV PATH="$VENV_PATH/bin:$PATH"
 RUN python -m venv $VENV_PATH && \
     source $VENV_PATH/bin/activate && \
     pip install --upgrade pip setuptools && \
-    pip install --no-cache-dir dbt-bigquery==1.5.3 pandas Faker pyarrow numpy && \
+    pip install --no-cache-dir dbt-bigquery==1.5.3 pandas Faker pyarrow numpy apache-airflow-providers-google==10.26.0 && \
     deactivate
 
 
