@@ -2,4 +2,5 @@
 apache-airflow-providers-google
 # astronomer-cosmos==1.9.0
 astronomer-cosmos==1.8.2
+astronomer-cosmos[google]
 # pydantic
