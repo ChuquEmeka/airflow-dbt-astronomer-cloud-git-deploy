@@ -164,7 +164,7 @@ jobs:
       - name: Run dbt Tests
         run: |
           source dbt_venv/bin/activate
-          dbt test --profiles-dir ~/.dbt --target dev
+          dbt test --project-dir dbt/healthcare_dbt_bigquery_data_pipeline --profiles-dir ~/.dbt --target dev
 
   deploy:
     name: Deploy to Astronomer Cloud
