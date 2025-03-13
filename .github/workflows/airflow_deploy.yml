@@ -1,3 +1,61 @@
+# name: Astronomer CI/CD - Deploy Airflow & dbt
+
+# on:
+#   push:
+#     branches:
+#       - main
+#   pull_request:
+#     branches:
+#       - main
+
+# env:
+#   ASTRO_API_TOKEN: ${{ secrets.ASTRO_API_TOKEN }}
+
+# jobs:
+#   lint-test:
+#     name: Lint and Test DAGs
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v3
+
+#       - name: Set up Python
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: "3.9"
+
+#       - name: Install Airflow and Dependencies
+#         run: |
+#           pip install apache-airflow pytest astronomer-cosmos==1.8.2 pydantic
+#           airflow db init
+#           airflow db upgrade
+
+#       - name: Test DAG integrity
+#         run: |
+#           python -c "import airflow; from airflow.models import DagBag; d = DagBag(include_examples=False); assert not d.import_errors, d.import_errors"
+
+#   deploy:
+#     name: Deploy to Astronomer Cloud
+#     runs-on: ubuntu-latest
+#     needs: lint-test
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v3
+
+#       - name: Install astronomer-cosmos in Docker Image
+#         run: |
+#           echo "RUN pip install astronomer-cosmos==1.8.2" >> Dockerfile
+
+#       - name: Deploy to Astro (Force Full Deployment)
+#         uses: astronomer/deploy-action@v0.9.0
+#         with:
+#           deployment-id: ${{ secrets.ASTRO_DEPLOYMENT_ID }}
+#           deploy-type: image-and-dags
+#           parse: true
+#           force: true  # Ensures full redeployment
+
+######################################
 name: Astronomer CI/CD - Deploy Airflow & dbt
 
 on:
@@ -15,7 +73,6 @@ jobs:
   lint-test:
     name: Lint and Test DAGs
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -35,17 +92,87 @@ jobs:
         run: |
           python -c "import airflow; from airflow.models import DagBag; d = DagBag(include_examples=False); assert not d.import_errors, d.import_errors"
 
+  test-dbt:
+    name: Test dbt Models
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      # Step 3: Upgrade pip and setuptools
+      - name: Upgrade pip and setuptools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+
+      # Step 4: Set up virtual environment and install dependencies
+      - name: Set up Virtual Environment
+        run: |
+          python -m venv dbt_venv
+          source dbt_venv/bin/activate
+          pip install --no-cache-dir dbt-bigquery==1.8.3 pandas Faker pyarrow numpy apache-airflow-providers-google==10.26.0
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      # Step 5: Create gcp-key.json and profiles.yml
+      - name: Create GCP Key and profiles.yml
+        run: |
+          mkdir -p ~/.dbt
+          # Write the Google credentials JSON file using secrets
+          cat <<EOF > ~/.dbt/gcp-key.json
+          {
+            "type": "${{ secrets.GOOGLE_TYPE }}",
+            "project_id": "${{ secrets.GOOGLE_PROJECT_ID }}",
+            "private_key_id": "${{ secrets.GOOGLE_PRIVATE_KEY_ID }}",
+            "private_key": "${{ secrets.GOOGLE_PRIVATE_KEY }}",
+            "client_email": "${{ secrets.GOOGLE_CLIENT_EMAIL }}",
+            "client_id": "${{ secrets.GOOGLE_CLIENT_ID }}",
+            "auth_uri": "${{ secrets.GOOGLE_AUTH_URI }}",
+            "token_uri": "${{ secrets.GOOGLE_TOKEN_URI }}",
+            "auth_provider_x509_cert_url": "${{ secrets.GOOGLE_AUTH_PROVIDER_CERT_URL }}",
+            "client_x509_cert_url": "${{ secrets.GOOGLE_CLIENT_CERT_URL }}"
+          }
+          EOF
+
+          # Validate the JSON
+          python -m json.tool ~/.dbt/gcp-key.json
+
+          # Dynamically generate profiles.yml
+          cat <<EOF > ~/.dbt/profiles.yml
+          healthcare_dbt_bigquery_data_pipeline:
+            outputs:
+              dev:
+                dataset: dev_healthcare_data
+                job_execution_timeout_seconds: 300
+                job_retries: 1
+                keyfile: ~/.dbt/gcp-key.json
+                location: europe-west3
+                method: service-account
+                priority: interactive
+                project: healthcare-data-project-442109
+                threads: 4
+                type: bigquery
+            target: dev
+          EOF
+
+      # Step 6: Run dbt Tests
+      - name: Run dbt Tests
+        run: |
+          source dbt_venv/bin/activate
+          dbt test --profiles-dir ~/.dbt --target dev
+
   deploy:
     name: Deploy to Astronomer Cloud
     runs-on: ubuntu-latest
-    needs: lint-test
+    needs: [lint-test, test-dbt]  # Ensure both tests pass before deploying
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Install astronomer-cosmos in Docker Image
-        run: |
-          echo "RUN pip install astronomer-cosmos==1.8.2" >> Dockerfile
 
       - name: Deploy to Astro (Force Full Deployment)
         uses: astronomer/deploy-action@v0.9.0
@@ -53,5 +180,6 @@ jobs:
           deployment-id: ${{ secrets.ASTRO_DEPLOYMENT_ID }}
           deploy-type: image-and-dags
           parse: true
-          force: true  # Ensures full redeployment
-
+          force: true
+        env:
+          ASTRO_API_TOKEN: ${{ secrets.ASTRO_API_TOKEN }}
