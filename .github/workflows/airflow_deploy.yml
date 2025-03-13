@@ -122,9 +122,10 @@ jobs:
       # Step 5: Create gcp-key.json and profiles.yml
       - name: Create GCP Key and profiles.yml
         run: |
-          mkdir -p ~/.dbt
+          # Ensure the .dbt directory exists
+          mkdir -p /home/runner/.dbt
           # Write the Google credentials JSON file using secrets
-          cat <<EOF > ~/.dbt/gcp-key.json
+          cat <<EOF > /home/runner/.dbt/gcp-key.json
           {
             "type": "${{ secrets.GOOGLE_TYPE }}",
             "project_id": "${{ secrets.GOOGLE_PROJECT_ID }}",
@@ -139,18 +140,23 @@ jobs:
           }
           EOF
 
-          # Validate the JSON
-          python -m json.tool ~/.dbt/gcp-key.json
+          # Validate the JSON file
+          if [ -f /home/runner/.dbt/gcp-key.json ]; then
+            python -m json.tool /home/runner/.dbt/gcp-key.json
+          else
+            echo "Error: gcp-key.json was not created successfully."
+            exit 1
+          fi
 
-          # Dynamically generate profiles.yml
-          cat <<EOF > ~/.dbt/profiles.yml
+          # Dynamically generate profiles.yml with absolute path
+          cat <<EOF > /home/runner/.dbt/profiles.yml
           healthcare_dbt_bigquery_data_pipeline:
             outputs:
               dev:
                 dataset: dev_healthcare_data
                 job_execution_timeout_seconds: 300
                 job_retries: 1
-                keyfile: ~/.dbt/gcp-key.json
+                keyfile: /home/runner/.dbt/gcp-key.json
                 location: europe-west3
                 method: service-account
                 priority: interactive
@@ -170,7 +176,7 @@ jobs:
       - name: Run dbt Tests
         run: |
           source dbt_venv/bin/activate
-          dbt test --project-dir dbt/healthcare_dbt_bigquery_data_pipeline --profiles-dir ~/.dbt --target dev
+          dbt test --project-dir dbt/healthcare_dbt_bigquery_data_pipeline --profiles-dir /home/runner/.dbt --target dev
 
   deploy:
     name: Deploy to Astronomer Cloud
