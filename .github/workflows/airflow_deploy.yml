@@ -160,7 +160,13 @@ jobs:
             target: dev
           EOF
 
-      # Step 6: Run dbt Tests
+      # Step 6: Install dbt package dependencies
+      - name: Install dbt Dependencies
+        run: |
+          source dbt_venv/bin/activate
+          dbt deps --project-dir dbt/healthcare_dbt_bigquery_data_pipeline
+
+      # Step 7: Run dbt Tests
       - name: Run dbt Tests
         run: |
           source dbt_venv/bin/activate
