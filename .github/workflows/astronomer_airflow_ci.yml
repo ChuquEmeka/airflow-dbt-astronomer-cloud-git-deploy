@@ -19,11 +19,11 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.9"
+          python-version: "3.10"  # Align with Astronomer runtime (avoid 3.12 if incompatible)
 
       - name: Install Airflow and Dependencies
         run: |
-          pip install apache-airflow pytest astronomer-cosmos==1.8.2 pydantic
+          pip install apache-airflow==2.8.0 pytest astronomer-cosmos==1.8.2 pydantic
           airflow db init
           airflow db upgrade
 
@@ -34,6 +34,8 @@ jobs:
   test-dbt:
     name: Test dbt Models
     runs-on: ubuntu-latest
+    env:
+      TARGET_ENV: dev  # Set environment to dev for testing
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -41,7 +43,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.10'  # Align with Astronomer runtime
 
       - name: Upgrade pip and setuptools
         run: |
@@ -51,14 +53,12 @@ jobs:
         run: |
           python -m venv dbt_venv
           source dbt_venv/bin/activate
-          pip install --no-cache-dir dbt-bigquery==1.8.3 pandas Faker pyarrow numpy apache-airflow-providers-google==10.26.0
+          pip install --no-cache-dir dbt-bigquery==1.8.3 pandas Faker pyarrow numpy apache-airflow-providers-google==10.26.0 astronomer-cosmos==1.8.2
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Create GCP Key and profiles.yml
         run: |
-          # Ensure the .dbt directory exists
           mkdir -p /home/runner/.dbt
-          # Write the Google credentials JSON file using secrets
           cat <<EOF > /home/runner/.dbt/gcp-key.json
           {
             "type": "${{ secrets.GOOGLE_TYPE }}",
@@ -74,7 +74,6 @@ jobs:
           }
           EOF
 
-          # Validate the JSON file
           if [ -f /home/runner/.dbt/gcp-key.json ]; then
             python -m json.tool /home/runner/.dbt/gcp-key.json
           else
@@ -82,7 +81,6 @@ jobs:
             exit 1
           fi
 
-          # Dynamically generate profiles.yml with absolute path
           cat <<EOF > /home/runner/.dbt/profiles.yml
           healthcare_dbt_bigquery_data_pipeline:
             outputs:
@@ -108,5 +106,4 @@ jobs:
       - name: Run dbt Tests
         run: |
           source dbt_venv/bin/activate
-          dbt test --project-dir dbt/healthcare_dbt_bigquery_data_pipeline --profiles-dir /home/runner/.dbt --target dev
-
+          dbt test --project-dir dbt/healthcare_dbt_bigquery_data_pipeline --profiles-dir /home/runner/.dbt --target $TARGET_ENV
