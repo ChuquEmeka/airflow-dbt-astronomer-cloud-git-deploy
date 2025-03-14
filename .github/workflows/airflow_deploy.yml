@@ -61,22 +61,23 @@ jobs:
           pip install --no-cache-dir dbt-bigquery==1.8.3 pandas Faker pyarrow numpy apache-airflow-providers-google==10.26.0
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      # Step 5: Create gcp-key.json and profiles.yml
+      # Step 5: Authenticate with GCP using service account key
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.PROJECT_ID }}
+          credentials: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      # Step 6: Create gcp-key.json and profiles.yml
       - name: Create GCP Key and profiles.yml
         run: |
           # Ensure the .dbt directory exists
           mkdir -p /home/runner/.dbt
 
-          # Check if the secret is empty
-          if [ -z "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" ]; then
-            echo "Error: GCP_SERVICE_ACCOUNT_KEY secret is empty or not set."
-            exit 1
-          fi
+          # Write the service account key to gcp-key.json (already authenticated by setup-gcloud)
+          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > /home/runner/.dbt/gcp-key.json
 
-          # Decode the base64-encoded secret and write it to the file
-          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" | base64 -d > /home/runner/.dbt/gcp-key.json
-
-          # Debug: Check if the file was created and display its content (for debugging purposes)
+          # Debug: Check if the file was created and display its content
           if [ -f /home/runner/.dbt/gcp-key.json ]; then
             echo "gcp-key.json created successfully. Contents:"
             cat /home/runner/.dbt/gcp-key.json
@@ -90,20 +91,6 @@ jobs:
             echo "gcp-key.json is valid JSON."
           else
             echo "Error: gcp-key.json is not valid JSON."
-            exit 1
-          fi
-
-          # Additional validation: Check for opening and closing curly brackets
-          if head -n 1 /home/runner/.dbt/gcp-key.json | grep -q "^{"; then
-            echo "Opening curly bracket found."
-          else
-            echo "Error: Opening curly bracket not found in gcp-key.json."
-            exit 1
-          fi
-          if tail -n 1 /home/runner/.dbt/gcp-key.json | grep -q "}$"; then
-            echo "Closing curly bracket found."
-          else
-            echo "Error: Closing curly bracket not found in gcp-key.json."
             exit 1
           fi
 
@@ -125,13 +112,13 @@ healthcare_dbt_bigquery_data_pipeline:
   target: dev
 EOF
 
-      # Step 6: Install dbt package dependencies
+      # Step 7: Install dbt package dependencies
       - name: Install dbt Dependencies
         run: |
           source dbt_venv/bin/activate
           dbt deps --project-dir dbt/healthcare_dbt_bigquery_data_pipeline
 
-      # Step 7: Run dbt Tests
+      # Step 8: Run dbt Tests
       - name: Run dbt Tests
         run: |
           source dbt_venv/bin/activate
@@ -154,3 +141,4 @@ EOF
           force: true
         env:
           ASTRO_API_TOKEN: ${{ secrets.ASTRO_API_TOKEN }}
+          GCP_SA_KEY: '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}'  # Pass the single-line JSON in single quotes
