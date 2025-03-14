@@ -92,7 +92,7 @@ def dbt_healthcare_pipeline():
 
     transform = BashOperator(
         task_id="transform",
-        bash_command=f"dbt run --select path:models --target {TARGET_ENV}",
+        bash_command=f"dbt deps && dbt run --select path:models --target {TARGET_ENV}",
         cwd="/usr/local/airflow/dbt/healthcare_dbt_bigquery_data_pipeline",
         trigger_rule="all_done"  # Run regardless of upstream task status
     )
