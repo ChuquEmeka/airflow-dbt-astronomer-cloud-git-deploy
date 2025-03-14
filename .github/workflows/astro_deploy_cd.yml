@@ -9,6 +9,7 @@ on:
 
 env:
   ASTRO_API_TOKEN: ${{ secrets.ASTRO_API_TOKEN }}
+  TARGET_ENV: prod  # Set environment to prod for deployment
 
 jobs:
   deploy:
@@ -26,10 +27,7 @@ jobs:
 
       - name: Create GCP Key and profiles.yml for Production
         run: |
-          # Ensure the dbt directory exists in the repository
           mkdir -p dbt/.dbt
-
-          # Write the Google credentials JSON file using secrets
           cat <<EOF > dbt/.dbt/gcp-key.json
           {
             "type": "${{ secrets.GOOGLE_TYPE }}",
@@ -45,7 +43,6 @@ jobs:
           }
           EOF
 
-          # Validate the JSON file
           if [ -f dbt/.dbt/gcp-key.json ]; then
             python -m json.tool dbt/.dbt/gcp-key.json
           else
@@ -53,7 +50,6 @@ jobs:
             exit 1
           fi
 
-          # Generate profiles.yml for production dataset
           cat <<EOF > dbt/.dbt/profiles.yml
           healthcare_dbt_bigquery_data_pipeline:
             outputs:
