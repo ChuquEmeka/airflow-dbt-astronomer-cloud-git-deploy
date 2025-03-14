@@ -96,21 +96,21 @@ jobs:
 
           # Dynamically generate profiles.yml with absolute path
           cat <<EOF > /home/runner/.dbt/profiles.yml
-healthcare_dbt_bigquery_data_pipeline:
-  outputs:
-    dev:
-      dataset: dev_healthcare_data
-      job_execution_timeout_seconds: 300
-      job_retries: 1
-      keyfile: /home/runner/.dbt/gcp-key.json
-      location: europe-west3
-      method: service-account
-      priority: interactive
-      project: healthcare-data-project-442109
-      threads: 4
-      type: bigquery
-  target: dev
-EOF
+          healthcare_dbt_bigquery_data_pipeline:
+            outputs:
+              dev:
+                dataset: dev_healthcare_data
+                job_execution_timeout_seconds: 300
+                job_retries: 1
+                keyfile: /home/runner/.dbt/gcp-key.json
+                location: europe-west3
+                method: service-account
+                priority: interactive
+                project: healthcare-data-project-442109
+                threads: 4
+                type: bigquery
+            target: dev
+          EOF
 
       # Step 7: Install dbt package dependencies
       - name: Install dbt Dependencies
