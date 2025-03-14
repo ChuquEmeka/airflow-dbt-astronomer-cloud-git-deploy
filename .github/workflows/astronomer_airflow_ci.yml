@@ -34,8 +34,6 @@ jobs:
   test-dbt:
     name: Test dbt Models
     runs-on: ubuntu-latest
-    env:
-      TARGET_ENV: dev  # Set environment to dev for testing
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -58,7 +56,9 @@ jobs:
 
       - name: Create GCP Key and profiles.yml
         run: |
+          # Ensure the .dbt directory exists
           mkdir -p /home/runner/.dbt
+          # Write the Google credentials JSON file using secrets
           cat <<EOF > /home/runner/.dbt/gcp-key.json
           {
             "type": "${{ secrets.GOOGLE_TYPE }}",
@@ -74,6 +74,7 @@ jobs:
           }
           EOF
 
+          # Validate the JSON file
           if [ -f /home/runner/.dbt/gcp-key.json ]; then
             python -m json.tool /home/runner/.dbt/gcp-key.json
           else
@@ -81,6 +82,7 @@ jobs:
             exit 1
           fi
 
+          # Dynamically generate profiles.yml with absolute path
           cat <<EOF > /home/runner/.dbt/profiles.yml
           healthcare_dbt_bigquery_data_pipeline:
             outputs:
@@ -106,4 +108,5 @@ jobs:
       - name: Run dbt Tests
         run: |
           source dbt_venv/bin/activate
-          dbt test --project-dir dbt/healthcare_dbt_bigquery_data_pipeline --profiles-dir /home/runner/.dbt --target $TARGET_ENV
+          dbt test --project-dir dbt/healthcare_dbt_bigquery_data_pipeline --profiles-dir /home/runner/.dbt --target dev
+
