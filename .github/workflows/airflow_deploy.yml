@@ -67,20 +67,14 @@ jobs:
           # Ensure the .dbt directory exists
           mkdir -p /home/runner/.dbt
 
-          # Assign the secret to a shell variable to handle multi-line JSON
-          GCP_KEY="${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}"
-
-          # Debug: Check if the secret is empty and log its length
-          if [ -z "$GCP_KEY" ]; then
+          # Check if the secret is empty
+          if [ -z "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" ]; then
             echo "Error: GCP_SERVICE_ACCOUNT_KEY secret is empty or not set."
             exit 1
           fi
-          echo "Secret length: ${#GCP_KEY}"
-          echo "Secret preview (first 50 characters): ${GCP_KEY:0:50}"
 
-          # Write the entire service account JSON to the file using a here-document to preserve newlines
-          cat <<EOF > /home/runner/.dbt/gcp-key.json $GCP_KEY
-          EOF
+          # Decode the base64-encoded secret and write it to the file
+          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" | base64 -d > /home/runner/.dbt/gcp-key.json
 
           # Debug: Check if the file was created and display its content (for debugging purposes)
           if [ -f /home/runner/.dbt/gcp-key.json ]; then
@@ -96,6 +90,20 @@ jobs:
             echo "gcp-key.json is valid JSON."
           else
             echo "Error: gcp-key.json is not valid JSON."
+            exit 1
+          fi
+
+          # Additional validation: Check for opening and closing curly brackets
+          if head -n 1 /home/runner/.dbt/gcp-key.json | grep -q "^{"; then
+            echo "Opening curly bracket found."
+          else
+            echo "Error: Opening curly bracket not found in gcp-key.json."
+            exit 1
+          fi
+          if tail -n 1 /home/runner/.dbt/gcp-key.json | grep -q "}$"; then
+            echo "Closing curly bracket found."
+          else
+            echo "Error: Closing curly bracket not found in gcp-key.json."
             exit 1
           fi
 
