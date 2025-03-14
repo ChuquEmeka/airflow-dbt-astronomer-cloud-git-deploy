@@ -66,14 +66,32 @@ jobs:
         run: |
           # Ensure the .dbt directory exists
           mkdir -p /home/runner/.dbt
+
+          # Debug: Check if the secret is empty and log its length
+          if [ -z "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" ]; then
+            echo "Error: GCP_SERVICE_ACCOUNT_KEY secret is empty or not set."
+            exit 1
+          fi
+          echo "Secret length: ${#secrets.GCP_SERVICE_ACCOUNT_KEY}"
+          echo "Secret preview (first 50 characters): ${secrets.GCP_SERVICE_ACCOUNT_KEY:0:50}"
+
           # Write the entire service account JSON from the secret
           echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > /home/runner/.dbt/gcp-key.json
 
-          # Validate the JSON file
+          # Debug: Check if the file was created and display its content (for debugging purposes)
           if [ -f /home/runner/.dbt/gcp-key.json ]; then
-            python -m json.tool /home/runner/.dbt/gcp-key.json
+            echo "gcp-key.json created successfully. Contents:"
+            cat /home/runner/.dbt/gcp-key.json
           else
             echo "Error: gcp-key.json was not created successfully."
+            exit 1
+          fi
+
+          # Validate the JSON file
+          if python -m json.tool /home/runner/.dbt/gcp-key.json; then
+            echo "gcp-key.json is valid JSON."
+          else
+            echo "Error: gcp-key.json is not valid JSON."
             exit 1
           fi
 
