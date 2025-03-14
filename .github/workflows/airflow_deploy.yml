@@ -38,22 +38,18 @@ jobs:
     name: Test dbt Models
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Checkout the repository
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Step 2: Set up Python environment
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      # Step 3: Upgrade pip and setuptools
       - name: Upgrade pip and setuptools
         run: |
           python -m pip install --upgrade pip setuptools wheel
 
-      # Step 4: Set up virtual environment and install dependencies
       - name: Set up Virtual Environment
         run: |
           python -m venv dbt_venv
@@ -61,20 +57,21 @@ jobs:
           pip install --no-cache-dir dbt-bigquery==1.8.3 pandas Faker pyarrow numpy apache-airflow-providers-google==10.26.0
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      # Step 5: Authenticate with GCP using service account key
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          project_id: ${{ secrets.PROJECT_ID }}
+
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ secrets.PROJECT_ID }}
-          credentials: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
 
-      # Step 6: Create gcp-key.json and profiles.yml
       - name: Create GCP Key and profiles.yml
         run: |
           # Ensure the .dbt directory exists
           mkdir -p /home/runner/.dbt
 
-          # Write the service account key to gcp-key.json (already authenticated by setup-gcloud)
+          # Write the service account key to gcp-key.json
           echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > /home/runner/.dbt/gcp-key.json
 
           # Debug: Check if the file was created and display its content
@@ -87,7 +84,7 @@ jobs:
           fi
 
           # Validate the JSON file
-          if python -m json.tool /home/runner/.dbt/gcp-key.json; then
+          if python -m json.tool /home/runner/.dbt/gcp-key.json > /dev/null; then
             echo "gcp-key.json is valid JSON."
           else
             echo "Error: gcp-key.json is not valid JSON."
@@ -112,13 +109,20 @@ jobs:
             target: dev
           EOF
 
-      # Step 7: Install dbt package dependencies
+          # Debug: Check if the file was created and display its content
+          if [ -f /home/runner/.dbt/profiles.yml ]; then
+            echo "profiles.yml created successfully. Contents:"
+            cat /home/runner/.dbt/profiles.yml
+          else
+            echo "Error: profiles.yml was not created successfully."
+            exit 1
+          fi
+
       - name: Install dbt Dependencies
         run: |
           source dbt_venv/bin/activate
           dbt deps --project-dir dbt/healthcare_dbt_bigquery_data_pipeline
 
-      # Step 8: Run dbt Tests
       - name: Run dbt Tests
         run: |
           source dbt_venv/bin/activate
