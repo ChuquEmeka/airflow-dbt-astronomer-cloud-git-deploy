@@ -10,7 +10,7 @@ from airflow.models import Variable
 # DAG configuration
 PATH_TO_DATA_SCRIPT = "/usr/local/airflow/include/raw_data_generation/healthcare_data.py"
 GCP_CONN_ID = Variable.get("GCP_CONN_ID", default_var="gcp")
-TARGET_ENV = Variable.get("TARGET_ENV", default_var="dev")  # Dynamically set to 'dev' or 'prod'
+TARGET_ENV = Variable.get("TARGET_ENV", default_var="prod")  # Dynamically set to 'dev' or 'prod'
 
 # Dynamically construct the dataset name
 DATASET = f"{TARGET_ENV}_healthcare_data"
