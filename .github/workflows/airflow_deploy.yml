@@ -38,18 +38,22 @@ jobs:
     name: Test dbt Models
     runs-on: ubuntu-latest
     steps:
+      # Step 1: Checkout the repository
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      # Step 2: Set up Python environment
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
+      # Step 3: Upgrade pip and setuptools
       - name: Upgrade pip and setuptools
         run: |
           python -m pip install --upgrade pip setuptools wheel
 
+      # Step 4: Set up virtual environment and install dependencies
       - name: Set up Virtual Environment
         run: |
           python -m venv dbt_venv
@@ -57,37 +61,32 @@ jobs:
           pip install --no-cache-dir dbt-bigquery==1.8.3 pandas Faker pyarrow numpy apache-airflow-providers-google==10.26.0
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-          project_id: ${{ secrets.PROJECT_ID }}
-
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
+      # Step 5: Create gcp-key.json and profiles.yml
       - name: Create GCP Key and profiles.yml
         run: |
           # Ensure the .dbt directory exists
           mkdir -p /home/runner/.dbt
-
-          # Write the service account key to gcp-key.json
-          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > /home/runner/.dbt/gcp-key.json
-
-          # Debug: Check if the file was created and display its content
-          if [ -f /home/runner/.dbt/gcp-key.json ]; then
-            echo "gcp-key.json created successfully. Contents:"
-            cat /home/runner/.dbt/gcp-key.json
-          else
-            echo "Error: gcp-key.json was not created successfully."
-            exit 1
-          fi
+          # Write the Google credentials JSON file using secrets
+          cat <<EOF > /home/runner/.dbt/gcp-key.json
+          {
+            "type": "${{ secrets.GOOGLE_TYPE }}",
+            "project_id": "${{ secrets.GOOGLE_PROJECT_ID }}",
+            "private_key_id": "${{ secrets.GOOGLE_PRIVATE_KEY_ID }}",
+            "private_key": "${{ secrets.GOOGLE_PRIVATE_KEY }}",
+            "client_email": "${{ secrets.GOOGLE_CLIENT_EMAIL }}",
+            "client_id": "${{ secrets.GOOGLE_CLIENT_ID }}",
+            "auth_uri": "${{ secrets.GOOGLE_AUTH_URI }}",
+            "token_uri": "${{ secrets.GOOGLE_TOKEN_URI }}",
+            "auth_provider_x509_cert_url": "${{ secrets.GOOGLE_AUTH_PROVIDER_CERT_URL }}",
+            "client_x509_cert_url": "${{ secrets.GOOGLE_CLIENT_CERT_URL }}"
+          }
+          EOF
 
           # Validate the JSON file
-          if python -m json.tool /home/runner/.dbt/gcp-key.json > /dev/null; then
-            echo "gcp-key.json is valid JSON."
+          if [ -f /home/runner/.dbt/gcp-key.json ]; then
+            python -m json.tool /home/runner/.dbt/gcp-key.json
           else
-            echo "Error: gcp-key.json is not valid JSON."
+            echo "Error: gcp-key.json was not created successfully."
             exit 1
           fi
 
@@ -109,20 +108,13 @@ jobs:
             target: dev
           EOF
 
-          # Debug: Check if the file was created and display its content
-          if [ -f /home/runner/.dbt/profiles.yml ]; then
-            echo "profiles.yml created successfully. Contents:"
-            cat /home/runner/.dbt/profiles.yml
-          else
-            echo "Error: profiles.yml was not created successfully."
-            exit 1
-          fi
-
+      # Step 6: Install dbt package dependencies
       - name: Install dbt Dependencies
         run: |
           source dbt_venv/bin/activate
           dbt deps --project-dir dbt/healthcare_dbt_bigquery_data_pipeline
 
+      # Step 7: Run dbt Tests
       - name: Run dbt Tests
         run: |
           source dbt_venv/bin/activate
@@ -145,4 +137,4 @@ jobs:
           force: true
         env:
           ASTRO_API_TOKEN: ${{ secrets.ASTRO_API_TOKEN }}
-          GCP_SA_KEY: '${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}'  # Pass the single-line JSON in single quotes
+
