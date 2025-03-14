@@ -78,8 +78,9 @@ jobs:
           echo "Secret length: ${#GCP_KEY}"
           echo "Secret preview (first 50 characters): ${GCP_KEY:0:50}"
 
-          # Write the entire service account JSON from the variable
-          echo "$GCP_KEY" > /home/runner/.dbt/gcp-key.json
+          # Write the entire service account JSON to the file using a here-document to preserve newlines
+          cat <<EOF > /home/runner/.dbt/gcp-key.json $GCP_KEY
+          EOF
 
           # Debug: Check if the file was created and display its content (for debugging purposes)
           if [ -f /home/runner/.dbt/gcp-key.json ]; then
