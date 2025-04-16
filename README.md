@@ -1,6 +1,6 @@
 # Comprehensive Step-by-Step Guide: Airflow Orchestration with BigQuery and dbt
 
-This guide walks you through setting up a data pipeline using Apache Airflow, Google BigQuery, and dbt, automating healthcare data workflows with clear, actionable steps. This project is developed and explained by Emeka. The video demonstration can be found in this [Youtube link](https://youtu.be/a8wP37AX-d8)
+This guide walks you through setting up a data pipeline using Apache Airflow, Google BigQuery, and dbt, automating healthcare data workflows with clear, actionable steps. This project is developed and explained by Emeka. The video demonstration can be found in this [Youtube link](https://youtu.be/bBVQ_DzXY44)
 
 ---
 ## Data Pipeline Overview
