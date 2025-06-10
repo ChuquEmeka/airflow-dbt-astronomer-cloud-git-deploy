@@ -1,0 +1,109 @@
+name: Astronomer CI - Lint and Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint-test:
+    name: Lint and Test DAGs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"  # Revert to original Python version
+
+      - name: Install Airflow and Dependencies
+        run: |
+          pip install apache-airflow pytest astronomer-cosmos==1.8.2 pydantic
+          airflow db init
+          airflow db upgrade
+
+      - name: Test DAG integrity
+        run: |
+          python -c "import airflow; from airflow.models import DagBag; d = DagBag(include_examples=False); assert not d.import_errors, d.import_errors"
+
+  test-dbt:
+    name: Test dbt Models
+    runs-on: ubuntu-latest
+    env:
+      TARGET_ENV: dev  # Set environment to dev for testing
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'  # Keep updated Python version for dbt
+
+      - name: Upgrade pip and setuptools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+
+      - name: Set up Virtual Environment
+        run: |
+          python -m venv dbt_venv
+          source dbt_venv/bin/activate
+          pip install --no-cache-dir dbt-bigquery==1.8.3 pandas Faker pyarrow numpy apache-airflow-providers-google==10.26.0 astronomer-cosmos==1.8.2
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Create GCP Key and profiles.yml
+        run: |
+          mkdir -p /home/runner/.dbt
+          cat <<EOF > /home/runner/.dbt/gcp-key.json
+          {
+            "type": "${{ secrets.GOOGLE_TYPE }}",
+            "project_id": "${{ secrets.GOOGLE_PROJECT_ID }}",
+            "private_key_id": "${{ secrets.GOOGLE_PRIVATE_KEY_ID }}",
+            "private_key": "${{ secrets.GOOGLE_PRIVATE_KEY }}",
+            "client_email": "${{ secrets.GOOGLE_CLIENT_EMAIL }}",
+            "client_id": "${{ secrets.GOOGLE_CLIENT_ID }}",
+            "auth_uri": "${{ secrets.GOOGLE_AUTH_URI }}",
+            "token_uri": "${{ secrets.GOOGLE_TOKEN_URI }}",
+            "auth_provider_x509_cert_url": "${{ secrets.GOOGLE_AUTH_PROVIDER_CERT_URL }}",
+            "client_x509_cert_url": "${{ secrets.GOOGLE_CLIENT_CERT_URL }}"
+          }
+          EOF
+
+          if [ -f /home/runner/.dbt/gcp-key.json ]; then
+            python -m json.tool /home/runner/.dbt/gcp-key.json
+          else
+            echo "Error: gcp-key.json was not created successfully."
+            exit 1
+          fi
+
+          cat <<EOF > /home/runner/.dbt/profiles.yml
+          healthcare_dbt_bigquery_data_pipeline:
+            outputs:
+              dev:
+                dataset: dev_healthcare_data
+                job_execution_timeout_seconds: 300
+                job_retries: 1
+                keyfile: /home/runner/.dbt/gcp-key.json
+                location: europe-west3
+                method: service-account
+                priority: interactive
+                project: healthcare-data-project-442109
+                threads: 4
+                type: bigquery
+            target: dev
+          EOF
+
+      - name: Install dbt Dependencies
+        run: |
+          source dbt_venv/bin/activate
+          dbt deps --project-dir dbt/healthcare_dbt_bigquery_data_pipeline
+
+      - name: Run dbt Tests
+        run: |
+          source dbt_venv/bin/activate
+          dbt test --project-dir dbt/healthcare_dbt_bigquery_data_pipeline --profiles-dir /home/runner/.dbt --target $TARGET_ENV

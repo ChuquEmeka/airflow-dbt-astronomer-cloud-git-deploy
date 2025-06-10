@@ -1,0 +1,162 @@
+# name: Astronomer CD - Deploy to Astronomer Cloud
+
+# on:
+#   workflow_run:
+#     workflows: ["Astronomer CI - Lint and Test"]
+#     branches: [main]
+#     types:
+#       - completed
+
+# env:
+#   ASTRO_API_TOKEN: ${{ secrets.ASTRO_API_TOKEN }}
+#   TARGET_ENV: prod  # Set environment to prod for deployment
+
+# jobs:
+#   deploy:
+#     name: Deploy to Astronomer Cloud
+#     runs-on: ubuntu-latest
+#     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v3
+
+#       - name: Set up Python
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: '3.10'  # Align with Astronomer runtime
+
+#       - name: Create GCP Key and profiles.yml for Production
+#         run: |
+#           mkdir -p dbt/.dbt
+#           cat <<EOF > dbt/.dbt/gcp-key.json
+#           {
+#             "type": "${{ secrets.GOOGLE_TYPE }}",
+#             "project_id": "${{ secrets.GOOGLE_PROJECT_ID }}",
+#             "private_key_id": "${{ secrets.GOOGLE_PRIVATE_KEY_ID }}",
+#             "private_key": "${{ secrets.GOOGLE_PRIVATE_KEY }}",
+#             "client_email": "${{ secrets.GOOGLE_CLIENT_EMAIL }}",
+#             "client_id": "${{ secrets.GOOGLE_CLIENT_ID }}",
+#             "auth_uri": "${{ secrets.GOOGLE_AUTH_URI }}",
+#             "token_uri": "${{ secrets.GOOGLE_TOKEN_URI }}",
+#             "auth_provider_x509_cert_url": "${{ secrets.GOOGLE_AUTH_PROVIDER_CERT_URL }}",
+#             "client_x509_cert_url": "${{ secrets.GOOGLE_CLIENT_CERT_URL }}"
+#           }
+#           EOF
+
+#           if [ -f dbt/.dbt/gcp-key.json ]; then
+#             python -m json.tool dbt/.dbt/gcp-key.json
+#           else
+#             echo "Error: gcp-key.json was not created successfully."
+#             exit 1
+#           fi
+
+#           cat <<EOF > dbt/.dbt/profiles.yml
+#           healthcare_dbt_bigquery_data_pipeline:
+#             outputs:
+#               prod:
+#                 dataset: prod_healthcare_data
+#                 job_execution_timeout_seconds: 300
+#                 job_retries: 1
+#                 keyfile: /usr/local/airflow/dbt/.dbt/gcp-key.json
+#                 location: europe-west3
+#                 method: service-account
+#                 priority: interactive
+#                 project: healthcare-data-project-442109
+#                 threads: 4
+#                 type: bigquery
+#             target: prod
+#           EOF
+
+#       - name: Deploy to Astro (Force Full Deployment)
+#         uses: astronomer/deploy-action@v0.9.0
+#         with:
+#           deployment-id: ${{ secrets.ASTRO_DEPLOYMENT_ID }}
+#           deploy-type: image-and-dags
+#           parse: true
+#           force: true
+#         env:
+#           ASTRO_API_TOKEN: ${{ secrets.ASTRO_API_TOKEN }}
+
+
+####################################################################################################
+name: Astronomer CD - Deploy to Astronomer Cloud
+
+on:
+  workflow_run:
+    workflows: ["Astronomer CI - Lint and Test"]
+    branches: [main]
+    types:
+      - completed
+
+env:
+  ASTRO_API_TOKEN: ${{ secrets.ASTRO_API_TOKEN }}
+  TARGET_ENV: prod  # Set environment to prod for deployment
+
+jobs:
+  deploy:
+    name: Deploy to Astronomer Cloud
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'  # Align with Astronomer runtime
+
+      - name: Create GCP Key and profiles.yml for Production
+        run: |
+          mkdir -p dbt/.dbt
+          mkdir -p include/gcp
+          cat <<EOF > dbt/.dbt/gcp-key.json
+          {
+            "type": "${{ secrets.GOOGLE_TYPE }}",
+            "project_id": "${{ secrets.GOOGLE_PROJECT_ID }}",
+            "private_key_id": "${{ secrets.GOOGLE_PRIVATE_KEY_ID }}",
+            "private_key": "${{ secrets.GOOGLE_PRIVATE_KEY }}",
+            "client_email": "${{ secrets.GOOGLE_CLIENT_EMAIL }}",
+            "client_id": "${{ secrets.GOOGLE_CLIENT_ID }}",
+            "auth_uri": "${{ secrets.GOOGLE_AUTH_URI }}",
+            "token_uri": "${{ secrets.GOOGLE_TOKEN_URI }}",
+            "auth_provider_x509_cert_url": "${{ secrets.GOOGLE_AUTH_PROVIDER_CERT_URL }}",
+            "client_x509_cert_url": "${{ secrets.GOOGLE_CLIENT_CERT_URL }}"
+          }
+          EOF
+          # Copy the key to the path expected by the transform task
+          cp dbt/.dbt/gcp-key.json include/gcp/service_account.json
+
+          if [ -f dbt/.dbt/gcp-key.json ]; then
+            python -m json.tool dbt/.dbt/gcp-key.json
+          else
+            echo "Error: gcp-key.json was not created successfully."
+            exit 1
+          fi
+
+          cat <<EOF > dbt/.dbt/profiles.yml
+          healthcare_dbt_bigquery_data_pipeline:
+            outputs:
+              prod:
+                dataset: prod_healthcare_data
+                job_execution_timeout_seconds: 300
+                job_retries: 1
+                keyfile: /usr/local/airflow/dbt/.dbt/gcp-key.json
+                location: europe-west3
+                method: service-account
+                priority: interactive
+                project: healthcare-data-project-442109
+                threads: 4
+                type: bigquery
+            target: prod
+          EOF
+
+      - name: Deploy to Astro (Force Full Deployment)
+        uses: astronomer/deploy-action@v0.9.0
+        with:
+          deployment-id: ${{ secrets.ASTRO_DEPLOYMENT_ID }}
+          deploy-type: image-and-dags
+          parse: true
+          force: true
+        env:
+          ASTRO_API_TOKEN: ${{ secrets.ASTRO_API_TOKEN }}
